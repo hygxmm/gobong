@@ -22,6 +22,7 @@
         </div>
     </div>
 </template>
+<!--https://blog.csdn.net/liuqing_1/article/details/57157227-->
 
 <script>
     import Board from './components/board';
