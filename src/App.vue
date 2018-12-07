@@ -1,181 +1,84 @@
 <template>
     <div id="app">
-        <div class="wrap">
-            <canvas class="bg" width="320" height="320"></canvas>
-            <div class="box">
-                <div v-for="(row,rowIndex) in list">
-                    <div class="dot" :class="[col === 1 ? 'white': '',col === 2 ? 'black' : '' ]" v-for="(col,colIndex) in row" @click="handleDown(rowIndex,colIndex,col)"></div>
-                </div>
+        <div class="login" v-if="!login">
+            <div class="name">
+                <input type="text" v-model="username" placeholder="请输入昵称" />
+                <button @click="handleLogin" :disabled="disabled">进入</button>
             </div>
-            <dialog ref="dialog">{{party}}胜利!游戏结束!</dialog>
+        </div>
+        <div class="list" v-if="login">
+            <ul>
+                <li v-for="item in lists" :key="item.id">
+                    <span>{{item.name}}</span>
+                    <button v-if="item.name !== username" @click="invitBattle(item)">对战</button>
+                </li>
+            </ul>
+        </div>
+        <div class="" v-if="login && begin">
+            <Board />
+        </div>
+        <div class="chats" v-if="login">
+            <Chat />
         </div>
     </div>
 </template>
 
 <script>
+    import Board from './components/board';
+    import Chat from './components/chat';
 export default {
     name: "app",
     data() {
         return {
-            list: [
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-            ],
-            nowColor: 1,//white: 1 black: 2
-            party: null
+            login: false,
+            begin: false,
+            username: '',
+            disabled: false,
+            lists: [],//在线列表
         };
     },
     methods: {
-        init() {
-            const canvas = document.querySelector('.bg');
-            const ctx = canvas.getContext('2d');
-            ctx.strokeStyle = '#999';
-            for(let i=0;i<=16;i++){
-                ctx.moveTo(0,i*20);
-                ctx.lineTo(320,i*20);
-                ctx.stroke();
-                ctx.moveTo(i*20,0);
-                ctx.lineTo(i*20,320);
-                ctx.stroke();
+        handleLogin(){
+            this.disabled = true;
+            if(this.username.trim().length === 0 ){
+                alert('请填写昵称')
             }
-        },
-        handleDown(rowIndex,colIndex,col){
-            if(col !== 0) return;
-            this.$set(this.list[rowIndex],colIndex,this.nowColor)
-            //判断是否胜利
-            this.isWin(rowIndex,colIndex)
-            // 变换落子方
-            if(this.nowColor === 1){
-                this.nowColor = 2
-            }else{
-                this.nowColor = 1
-            }
-        },
-        //判断输赢
-        isWin(rowIndex,colIndex){
-            this.party = this.nowColor === 1 ? '白子' : '黑子';
-            //横向对比
-            const rowWin = this.rowCompare(rowIndex,colIndex);
-            if(rowWin){
-                this.$refs.dialog.showModal()
-                return ;
-            }
-            //纵向对比
-            const colWin = this.colCompare(rowIndex,colIndex);
-            if(colWin){
-                this.$refs.dialog.showModal()
-                return ;
-            }
-            //斜向对比
-            const slantWin = this.slantCompare(rowIndex,colIndex);
-            if(slantWin){
-                this.$refs.dialog.showModal()
-                return ;
-            }
-            //反斜向对比
-            const unSlantWin = this.unSlantCompare(rowIndex,colIndex);
-            if(unSlantWin){
-                this.$refs.dialog.showModal();
-                return ;
-            }
-        },
-        //横向对比
-        rowCompare(rowIndex,colIndex){
-            let arr = [[rowIndex,colIndex]];
-            for(let i=1;i<5;i++){
-                arr.unshift([rowIndex,colIndex - i])
-            }
-            for(let i=1;i<5;i++){
-                arr.push([rowIndex,colIndex + i])
-            }
-            const arr1 = arr.map(item => {
-                if(!this.list[item[0]][item[1]]) return 0;
-                return  this.list[item[0]][item[1]]
+            this.$io.emit('login',this.username);
+            this.$io.on('login',(data) => {
+                this.disabled = false;
+                if(data.code === 200){
+                    this.login = true;
+                }else if(data.code === 300){
+                    alert('昵称重复');
+                    this.username = '';
+                }
+            });
+            this.$io.on('updateOnline',(data) => {
+                this.lists = data
             })
-            if(arr1.join('').includes(this.nowColor.toString().repeat(5))){
-                return true
-            }else{
-                return false
-            }
         },
-        //纵向对比
-        colCompare(rowIndex,colIndex){
-            let arr = [[rowIndex,colIndex]];
-            for(let i=1;i<5;i++){
-                arr.unshift([rowIndex - i,colIndex])
-            }
-            for(let i=1;i<5;i++){
-                arr.push([rowIndex + i,colIndex])
-            }
-            const arr1 = arr.map(item => {
-                if(!this.list[item[0]]) return 0;
-                return  this.list[item[0]][item[1]]
+        invitBattle(obj){
+            this.$io.emit('battle',obj.id);
+            this.$io.on('battle',(data) => {
+                if(data.code === 200){
+                    this
+
+                }
             })
-            if(arr1.join('').includes(this.nowColor.toString().repeat(5))){
-                return true
-            }else{
-                return false
-            }
-        },
-        //斜向对比
-        slantCompare(rowIndex,colIndex){
-            let arr = [[rowIndex,colIndex]];
-            for(let i=1;i<5;i++){
-                arr.unshift([rowIndex - i,colIndex - i])
-            }
-            for(let i=1;i<5;i++){
-                arr.push([rowIndex + i,colIndex + i])
-            }
-            const arr1 = arr.map(item => {
-                if(!this.list[item[0]]) return 0;
-                return  this.list[item[0]][item[1]]
-            })
-            if(arr1.join('').includes(this.nowColor.toString().repeat(5))){
-                return true
-            }else{
-                return false
-            }
-        },
-        //反斜向对比
-        unSlantCompare(rowIndex,colIndex){
-            let arr = [[rowIndex,colIndex]];
-            for(let i=1;i<5;i++){
-                arr.unshift([rowIndex - i,colIndex + i])
-            }
-            for(let i=1;i<5;i++){
-                arr.push([rowIndex + i,colIndex - i])
-            }
-            const arr1 = arr.map(item => {
-                if(!this.list[item[0]]) return 0;
-                return  this.list[item[0]][item[1]]
-            })
-            if(arr1.join('').includes(this.nowColor.toString().repeat(5))){
-                return true
-            }else{
-                return false
-            }
         }
     },
-    mounted(){
-        this.init()
+    components: {
+        Board,
+        Chat
     }
-};
+}
 </script>
 
 <style>
+*{
+    margin: 0;
+    padding: 0;
+}
 html,
 body {
     margin: 0;
@@ -183,46 +86,57 @@ body {
     width: 100%;
     height: 100%;
 }
+ul,ol,li{
+    list-style: none;
+}
 #app {
     width: 100%;
     height: 100%;
     background-color: blanchedalmond;
     position: relative;
 }
-.wrap{
-    width: 320px;
-    height: 320px;
-    position: absolute;
-    top: 100px;
+.name {
+    position: fixed;
+    top: 50%;
     left: 50%;
-    transform: translateX(-50%);
+    transform: translate(-50%,-50%);
 }
-
-.box{
+.name input{
+    width: 240px;
+    height: 30px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    box-shadow: 0 0 10px #ccc;
+    padding: 5px;
+    outline: none;
+}
+.list{
     width: 300px;
-    height: 300px;
+    height: 500px;
+    background-color: #fff;
+    border-radius: 5px;
+    box-shadow: 0 0 10px #ccc;
     position: absolute;
-    top: 10px;
-    left: 10px;
-    z-index: 10;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%,-50%);
+    overflow: auto;
 }
-.box > div {
-    width: 100%;
-    height: 20px;
+.list ul {
+    padding: 0 10px;
+}
+.list ul li {
+    height: 30px;
+    border-bottom: 1px solid #ccc;
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.charts{
+    width: 350px;
+    height: 500px;
 }
 
-.dot {
-    width: 14px;
-    height: 14px;
-    margin: 3px;
-    border-radius: 7px;
-    float: left;
-}
-.white{
-    background-color: white;
-}
-.black{
-    background-color: black;
-}
 
 </style>
