@@ -7,26 +7,37 @@
             </div>
         </div>
         <div class="list" v-if="login">
-            <ul>
-                <li v-for="item in lists" :key="item.id">
-                    <span>{{item.name}}</span>
-                    <button v-if="item.name !== username" @click="invitBattle(item)">对战</button>
-                </li>
-            </ul>
-        </div>
-        <div class="" v-if="login && begin">
-            <Board />
-        </div>
-        <div class="chats" v-if="login">
-            <Chat />
+            <div class="chat-header">{{username}}</div>
+            <div class="chat-container">
+                <ul class="message-list-wrap">
+                    <li v-for="item in lists" :key="item.id" >
+                        <!-- 其他人消息 -->
+                        <div class="other-message" v-if="item.type == 'other'">
+                            <div><span>{{item.user}}</span></div>
+                            <div><span>{{item.message}}</span></div>
+                        </div>
+                        <!-- 自己消息 -->
+                        <div class="my-message" v-if="item.type == 'my'">
+                            <div class="clearFloat"><span>{{item.user}}</span></div>
+                            <div class="clearFloat"><span>{{item.message}}</span></div>
+                        </div>
+                        <!-- 系统消息 -->
+                        <div class="system-message" v-if="item.type == 'system'">
+                            <span>{{item.message}}</span>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            <div class="chat-footer">
+                <input type="text" v-model="message" />
+                <button @click="sendMessage">发送</button>
+            </div>
         </div>
     </div>
 </template>
 <!--https://blog.csdn.net/liuqing_1/article/details/57157227-->
 
 <script>
-    import Board from './components/board';
-    import Chat from './components/chat';
 export default {
     name: "app",
     data() {
@@ -35,7 +46,8 @@ export default {
             begin: false,
             username: '',
             disabled: false,
-            lists: [],//在线列表
+            lists: [],//消息列表
+            message: ''
         };
     },
     methods: {
@@ -47,8 +59,11 @@ export default {
             this.$io.emit('login',this.username);
             this.$io.on('login',(data) => {
                 this.disabled = false;
-                if(data.code === 200){
+                if(data.type === 'success'){
                     this.login = true;
+                    this.$io.name = this.username;
+                    sessionStorage.setItem('ld_login','测试登录');
+                    this.$parent.username = this.username;
                 }else if(data.code === 300){
                     alert('昵称重复');
                     this.username = '';
@@ -58,19 +73,21 @@ export default {
                 this.lists = data
             })
         },
-        invitBattle(obj){
-            this.$io.emit('battle',obj.id);
-            this.$io.on('battle',(data) => {
-                if(data.code === 200){
-                    this
-
-                }
-            })
+        sendMessage(){
+            if(this.message.trim().length === 0) return ;
+            this.$io.emit('info',{
+                message: this.message,
+            });
         }
     },
-    components: {
-        Board,
-        Chat
+    mounted() {
+        if (sessionStorage.getItem('ld_login')) {
+            this.login = true
+        }
+        this.$io.on('info', (data) => {
+            console.log(data, "====");
+            this.lists.push(data);
+        });
     }
 }
 </script>
@@ -79,11 +96,10 @@ export default {
 *{
     margin: 0;
     padding: 0;
+    box-sizing: border-box;
 }
 html,
 body {
-    margin: 0;
-    padding: 0;
     width: 100%;
     height: 100%;
 }
@@ -96,7 +112,19 @@ ul,ol,li{
     background-color: blanchedalmond;
     position: relative;
 }
+.login{
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+.list{
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
 .name {
+    display: flex;
+    flex-direction: column;
     position: fixed;
     top: 50%;
     left: 50%;
@@ -104,40 +132,116 @@ ul,ol,li{
 }
 .name input{
     width: 240px;
-    height: 30px;
+    height: 35px;
     border-radius: 8px;
     border: 1px solid #ccc;
     box-shadow: 0 0 10px #ccc;
     padding: 5px;
     outline: none;
 }
-.list{
-    width: 300px;
-    height: 500px;
-    background-color: #fff;
+.name button{
+    width: 240px;
+    height: 30px;
+    margin-top: 20px;
+    border: none;
     border-radius: 5px;
-    box-shadow: 0 0 10px #ccc;
+    background-color: brown;
+    color: #fff;
+}
+.chat-header{
+    width: 100%;
+    height: 45px;
+    background-color: dodgerblue;
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%,-50%);
+    top: 0;
+    color: #fff;
+    text-align: center;
+    line-height: 45px;
+}
+.chat-container{
+    width: 100%;
+    position: absolute;
+    top: 45px;
+    bottom: 48px;
+    background-color: white;
+    padding: 0 10px;
     overflow: auto;
 }
-.list ul {
-    padding: 0 10px;
+.chat-footer{
+    width: 100%;
+    height: 48px;
+    background-color: indianred;
+    position: absolute;
+    bottom: 0;
+    display: flex;
 }
-.list ul li {
-    height: 30px;
-    border-bottom: 1px solid #ccc;
+.chat-footer input {
+    width: 80%;
+    padding: 5px;
+    outline: none;
+}
+.chat-footer button {
+    width: 20%;
+}
+.other-message{
+    font-size: 12px;
+    margin-bottom: 10px;
+}
+.other-message > div:nth-child(1) span{
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 5px 5px 0 0;
+    background-color: blanchedalmond;
+
+}
+.other-message > div:nth-child(2) span{
+    display: inline-block;
+    background-color: #f0f;
+    padding: 5px 10px;
+    max-width: 80%;
+    border-radius: 0 3px 3px 3px;
+    color: #fff;
+}
+.my-message{
+    font-size: 12px;
+    margin-bottom: 10px;
+}
+.my-message > div:nth-child(1) span{
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 5px 5px 0 0;
+    background-color: blanchedalmond;
+    float: right;
+}
+.my-message > div:nth-child(2) span{
+    display: inline-block;
+    background-color: #f0f;
+    padding: 5px 10px;
+    max-width: 80%;
+    border-radius: 0 3px 3px 3px;
+    color: #fff;
+    float: right;
+}
+.system-message{
+    margin-bottom: 10px;
     font-size: 12px;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    justify-content: center;
 }
-.charts{
-    width: 350px;
-    height: 500px;
+.system-message span{
+    border-radius: 20px;
+    background-color: #dedede;
+    padding: 2px 10px;
+    max-width: 80%;
 }
-
-
+.clearFloat{
+    zoom: 1;
+}
+.clearFloat::after{
+    content: "";
+    display: block;
+    height: 0;
+    clear: both;
+    visibility: hidden;
+}
 </style>
